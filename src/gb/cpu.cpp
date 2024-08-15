@@ -19,11 +19,27 @@ int op_ld_to_adr(uint16_t &pc, uint16_t adr, unsigned char val, MMU &mmu, int pc
     return cycles;
 };
 
-int op_inc(uint16_t &pc, unsigned char &reg, Flags &flags, int pc_steps = 1, int cycles = 1) {
+int op_ld_reg(uint16_t &pc, unsigned char &reg, unsigned char val, int pc_steps = 1, int cycles = 1) {
+    reg = val;
+    pc += pc_steps;
+    return cycles;
+};
+
+int op_inc_u8(uint16_t &pc, unsigned char &reg, Flags &flags, int pc_steps = 1, int cycles = 1) {
     flags.N = 0;
     flags.H = (reg & 0x0F) == 0x0F;
     reg += 1;
     flags.Z = reg == 0;
+
+    pc += pc_steps;
+    return cycles;
+};
+
+int op_inc_u16(uint16_t &pc, unsigned char &regHi, unsigned char &regLo, int pc_steps = 1, int cycles = 1) {
+    uint16_t reg = (regHi << 8) | regLo;
+    reg += 1;
+    regHi = reg >> 8 & 0xFF;
+    regLo = reg & 0xFF;
 
     pc += pc_steps;
     return cycles;
@@ -119,7 +135,7 @@ int CPU::stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags)
 
         // INC C
         case 0x0c:
-            return op_inc(pc, registers.C, flags, 1, 1);
+            return op_inc_u8(pc, registers.C, flags, 1, 1);
             break;
 
         // LD (HL),A
@@ -137,15 +153,37 @@ int CPU::stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags)
             return op_ld_u16(pc, registers.D, registers.E, mmu.readFromMemory(pc + 2), mmu.readFromMemory(pc + 1), 3, 3);
             break;
 
+        // LD A,(DE)
+        case 0x1a:
+            return op_ld_reg(pc, registers.A, mmu.readFromMemory((registers.D << 8) | registers.E), 1, 2);
+            break;
+
+        // CALL u16
+        // todo refactor
+        case 0xcd:
+            sp--;
+            mmu.writeToMemory(sp, (pc + 3) >> 8);
+            sp--;
+            mmu.writeToMemory(sp, (pc + 3) & 0xFF);
+            pc += 3;
+            return 6;
+            break;
+
+        // INC DE
+        case 0x13:
+            return op_inc_u16(pc, registers.D, registers.E, 1, 2);
+            break;
+
         // LD SP,u16
+        // todo refactor
         case 0x31: 
             sp = mmu.readFromMemory(pc + 1) | (mmu.readFromMemory(pc + 2) << 8);
             pc += 3;
             return 3;
             break;
-        
 
         // LD (HL-),A
+        // todo refactor
         case 0x32: {
             uint16_t val = (registers.H << 8) | registers.L;
             // printf("0x%04x\n", val);
@@ -162,6 +200,7 @@ int CPU::stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags)
         }
 
         // XOR A,A
+        // todo refactor
         case 0xaf:
             if (flags.Z) registers.A = 0;
             else registers.A = registers.A ^ registers.A;
@@ -170,6 +209,7 @@ int CPU::stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags)
             break;
 
         // LD HL,u16
+        // todo refactor
         case 0x21:
             registers.H = mmu.readFromMemory(pc + 2);
             registers.L = mmu.readFromMemory(pc + 1);
@@ -178,6 +218,7 @@ int CPU::stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags)
             break;
 
         // LD L,B
+        // todo refactor
         case 0x68:
             registers.B = registers.L;
             pc++;
@@ -204,6 +245,7 @@ int CPU::readCBPrefixed(u_int16_t &pc, u_int16_t &sp, Registers &registers, Flag
     switch (cb_opcode) {
 
         // BIT 7,H
+        // todo refactor
         case 0x7c:
             flags.Z = ~(registers.H >> 7) & 0x1;
             flags.N = 0;
