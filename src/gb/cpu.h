@@ -9,8 +9,9 @@ class CPU {
         CPU();
         ~CPU();
         void run();
-        int stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags);
+        void step();
     private:
+        int stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags);
         int readCBPrefixed(u_int16_t &pc, u_int16_t &sp, Registers &registers, Flags &flags);
         // unsigned char memory[0xFA000];
         // unsigned char memory[512];

@@ -89,7 +89,7 @@ CPU::CPU()
 {
     PC = 0;
     SP = 0;
-    mmu.loadROM("/Users/nbl/Projects/SDL/dmg_boot.bin");
+    mmu.loadROM("dmg_boot.bin");
 }
 
 CPU::~CPU()
@@ -101,6 +101,11 @@ void CPU::run()
     while (1) {
         stepCPU(PC, SP, registers, flags);
     }
+}
+
+void CPU::step()
+{
+    stepCPU(PC, SP, registers, flags);
 }
 
 int CPU::stepCPU(uint16_t &pc, uint16_t &sp, Registers &registers, Flags &flags)
